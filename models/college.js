@@ -43,12 +43,50 @@ const collegeSchema = new mongoose.Schema(
         ],
       },
     ],
+    yearOfEstablishment: {
+      type: Number,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: ["Public", "Private"],
+      required: true,
+    },
+    feesRange: {
+      min: { type: Number, required: true },
+      max: { type: Number, required: true },
+    },
+    highestPackage: {
+      type: String, 
+    },
+    popularity: {
+      type: String,
+      enum: ["Popular", "Standard", "New"],
+      default: "Standard",
+    },
     ratings: {
       type: Number,
       min: 0,
       max: 5,
       default: 0,
     },
+    admissionDetails: {
+      ugCourses: String,
+      pgCourses: String,
+      phdCourses: String,
+      admissionTestDates: String,
+      applicationDeadline: String,
+    },
+    scholarships: {
+      type: Boolean,
+      default: false,
+    },
+    gallery: [
+      {
+        url: String,
+        description: String,
+      },
+    ],
     reviews: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

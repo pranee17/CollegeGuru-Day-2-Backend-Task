@@ -43,7 +43,9 @@ exports.getCollegeById = async (req, res) => {
 };
 
 exports.createCollege = async (req, res) => {
-  const college = new College(req.body);
+  const collegeData = req.body;
+
+  const college = new College(collegeData);
   try {
     const newCollege = await college.save();
     res.status(201).json(newCollege);
@@ -51,6 +53,7 @@ exports.createCollege = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 exports.updateCollege = async (req, res) => {
   try {
@@ -63,6 +66,7 @@ exports.updateCollege = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.deleteCollege = async (req, res) => {
   try {
