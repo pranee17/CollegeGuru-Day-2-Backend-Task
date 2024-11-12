@@ -12,4 +12,11 @@ router.delete("/:id", collegeController.deleteCollege);
 router.post("/:id/reviews", authenticate, collegeController.addReview);
 router.get("/:id/reviews", collegeController.getReviews);
 
+
+router.put("/:id/reviews/:reviewId/flag", authenticate, collegeController.flagReview);
+
+router.delete('/:collegeId/reviews/:reviewId', collegeController.deleteReview);
+
+
+
 module.exports = router;

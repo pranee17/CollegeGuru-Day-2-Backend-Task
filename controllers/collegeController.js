@@ -104,3 +104,51 @@ exports.getReviews = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.flagReview = async (req, res) => {
+  try {
+    const { id, reviewId } = req.params;
+
+    const college = await College.findById(id);
+    if (!college) return res.status(404).json({ message: "College not found" });
+
+    const review = college.reviews.id(reviewId);
+    if (!review) return res.status(404).json({ message: "Review not found" });
+
+    review.flagged = true;
+    await college.save();
+
+    res.status(200).json({ message: "Review flagged for moderation" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteReview = async (req, res) => {
+  try {
+    const { collegeId, reviewId } = req.params;
+
+    const college = await College.findById(collegeId);
+    if (!college) {
+      console.log(`College with ID ${collegeId} not found`);
+      return res.status(404).json({ message: "College not found" });
+    }
+
+    const review = college.reviews.id(reviewId);
+    if (!review) {
+      console.log(
+        `Review with ID ${reviewId} not found for college ${collegeId}`
+      );
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    college.reviews.pull({ _id: reviewId });
+
+    await college.save();
+
+    res.status(200).json({ message: "Review deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    res.status(500).json({ message: "Server error, please try again later" });
+  }
+};
