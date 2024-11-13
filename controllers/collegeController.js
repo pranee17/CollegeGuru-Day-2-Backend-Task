@@ -54,7 +54,6 @@ exports.createCollege = async (req, res) => {
   }
 };
 
-
 exports.updateCollege = async (req, res) => {
   try {
     const college = await College.findByIdAndUpdate(req.params.id, req.body, {
@@ -67,30 +66,11 @@ exports.updateCollege = async (req, res) => {
   }
 };
 
-
 exports.deleteCollege = async (req, res) => {
   try {
     const college = await College.findByIdAndDelete(req.params.id);
     if (!college) return res.status(404).json({ message: "College not found" });
     res.status(200).json({ message: "College deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.addReview = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reviewText, rating } = req.body;
-    const userId = req.user.userId;
-
-    const college = await College.findById(id);
-    if (!college) return res.status(404).json({ message: "College not found" });
-
-    college.reviews.push({ user: userId, reviewText, rating });
-    await college.save();
-
-    res.status(201).json({ message: "Review added successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -154,5 +134,74 @@ exports.deleteReview = async (req, res) => {
   } catch (error) {
     console.error("Error deleting review:", error);
     res.status(500).json({ message: "Server error, please try again later" });
+  }
+};
+
+exports.getFlaggedReviews = async (req, res) => {
+  try {
+    const flaggedColleges = await College.find({ "reviews.flagged": true })
+      .select("name location reviews")
+      .populate("reviews.user", "name");
+
+    const flaggedReviews = flaggedColleges.map((college) => {
+      return {
+        collegeId: college._id,
+        collegeName: college.name,
+        reviews: college.reviews.filter((review) => review.flagged),
+      };
+    });
+
+    res.status(200).json(flaggedReviews);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.approveFlaggedReview = async (req, res) => {
+  const { collegeId, reviewId } = req.params;
+
+  try {
+    const college = await College.findById(collegeId);
+    if (!college) return res.status(404).json({ message: "College not found" });
+
+    const review = college.reviews.id(reviewId);
+    if (!review || !review.flagged)
+      return res.status(404).json({ message: "Flagged review not found" });
+
+    review.flagged = false;
+    await college.save();
+
+    res.status(200).json({ message: "Review approved successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const inappropriateWords = ["spam", "fake", "abuse"];
+
+exports.addReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reviewText, rating } = req.body;
+    const userId = req.user.userId;
+
+    const isInappropriate = inappropriateWords.some((word) =>
+      reviewText.includes(word)
+    );
+    const college = await College.findById(id);
+    if (!college) return res.status(404).json({ message: "College not found" });
+
+    college.reviews.push({
+      user: userId,
+      reviewText,
+      rating,
+      flagged: isInappropriate,
+    });
+
+    await college.save();
+
+    res.status(201).json({ message: "Review added successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
