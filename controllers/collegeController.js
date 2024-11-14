@@ -3,30 +3,31 @@ const College = require("../models/college");
 exports.getAllColleges = async (req, res) => {
   try {
     const {
-      page = 1,
       limit = 10,
+      lastId,
       sortBy = "name",
       degrees,
       location,
     } = req.query;
-
     const query = {};
     if (degrees) query.degrees = { $in: degrees.split(",") };
     if (location) query.location = location;
 
+    if (lastId) {
+      query._id = { $gt: lastId };
+    }
+
     const colleges = await College.find(query)
-      .sort(sortBy)
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .sort({ _id: 1 })
+      .limit(Number(limit))
+      .lean();
 
-    const totalColleges = await College.countDocuments(query);
-
-    res.status(200).json({
-      total: totalColleges,
-      page: Number(page),
-      totalPages: Math.ceil(totalColleges / limit),
-      colleges,
-    });
+    res
+      .status(200)
+      .json({
+        colleges,
+        lastId: colleges.length ? colleges[colleges.length - 1]._id : null,
+      });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -34,8 +35,14 @@ exports.getAllColleges = async (req, res) => {
 
 exports.getCollegeById = async (req, res) => {
   try {
-    const college = await College.findById(req.params.id);
-    if (!college) return res.status(404).json({ message: "College not found" });
+    const college = await College.findById(req.params.id)
+      .select("name location degrees reviews")
+      .lean();
+
+    if (!college) {
+      return res.status(404).json({ message: "College not found" });
+    }
+
     res.status(200).json(college);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -139,17 +146,22 @@ exports.deleteReview = async (req, res) => {
 
 exports.getFlaggedReviews = async (req, res) => {
   try {
-    const flaggedColleges = await College.find({ "reviews.flagged": true })
-      .select("name location reviews")
-      .populate("reviews.user", "name");
-
-    const flaggedReviews = flaggedColleges.map((college) => {
-      return {
-        collegeId: college._id,
-        collegeName: college.name,
-        reviews: college.reviews.filter((review) => review.flagged),
-      };
-    });
+    const flaggedReviews = await College.aggregate([
+      { $match: { "reviews.flagged": true } },
+      {
+        $project: {
+          name: 1,
+          location: 1,
+          reviews: {
+            $filter: {
+              input: "$reviews",
+              as: "review",
+              cond: { $eq: ["$$review.flagged", true] },
+            },
+          },
+        },
+      },
+    ]);
 
     res.status(200).json(flaggedReviews);
   } catch (error) {

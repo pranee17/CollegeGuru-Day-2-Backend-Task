@@ -97,9 +97,18 @@ const collegeSchema = new mongoose.Schema(
       },
     ],
   },
+  
   {
     timestamps: true,
   }
 );
+
+
+
+collegeSchema.index({ name: 1 });
+collegeSchema.index({ location: 1 });
+collegeSchema.index({ degrees: 1 });
+collegeSchema.index({ "reviews.flagged": 1 }); // For flagged reviews
+collegeSchema.index({ location: 1, degrees: 1 }); // Compound index for common queries
 
 module.exports = mongoose.model("College", collegeSchema);

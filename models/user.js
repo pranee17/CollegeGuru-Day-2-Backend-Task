@@ -72,4 +72,8 @@ userSchema.methods.comparePassword = function (inputPassword) {
   return bcrypt.compare(inputPassword, this.password);
 };
 
+
+userSchema.index({ email: 1 });
+userSchema.index({ mobileNumber: 1 });
+
 module.exports = mongoose.model("User", userSchema);
