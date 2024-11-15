@@ -3,11 +3,7 @@ const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      minlength: 3,
-    },
+    name: { type: String, required: true, minlength: 3 },
     email: {
       type: String,
       required: true,
@@ -21,46 +17,17 @@ const userSchema = new mongoose.Schema(
       unique: true,
       match: [/^\d{10}$/, "Please enter a valid 10-digit mobile number."],
     },
-    stream: {
+    stream: { type: String, required: true },
+    level: { type: String, required: true },
+    password: { type: String, required: true, minlength: 4 },
+    role: {
       type: String,
-      required: true,
-      enum: [
-        "Engineering",
-        "Management",
-        "Commerce & Banking",
-        "Medical",
-        "Sciences",
-        "Hotel Management",
-        "IT",
-        "Arts & Humanities",
-        "Mass Communication",
-        "Nursing",
-        "Agriculture",
-        "Design",
-        "Law",
-        "Pharmacy",
-        "Paramedical",
-        "Dental",
-        "Performing Arts",
-        "Education",
-      ],
-    },
-    level: {
-      type: String,
-      required: true,
-      enum: ["Undergraduate", "Postgraduate", "Diploma", "Doctorate"],
-    },
-    password: {
-      type: String,
-      required: true,
-      minlength: 4,
+      enum: ["user", "admin"],
+      default: "user",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
-
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
@@ -71,9 +38,5 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.comparePassword = function (inputPassword) {
   return bcrypt.compare(inputPassword, this.password);
 };
-
-
-userSchema.index({ email: 1 });
-userSchema.index({ mobileNumber: 1 });
 
 module.exports = mongoose.model("User", userSchema);

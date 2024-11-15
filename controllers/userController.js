@@ -5,7 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, mobileNumber, stream, level, password } = req.body;
+    const { name, email, mobileNumber, stream, level, password, role } =
+      req.body;
 
     if (!email || !password || !name || !mobileNumber) {
       return res.status(400).json({ message: "All fields are required" });
@@ -16,6 +17,8 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Email already in use" });
     }
 
+    const newRole = role === "admin" ? "admin" : "user"; 
+
     const newUser = new userSchema({
       name,
       email,
@@ -23,6 +26,7 @@ exports.register = async (req, res) => {
       stream,
       level,
       password,
+      role: newRole, 
     });
     await newUser.save();
 
@@ -37,7 +41,9 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     const user = await userSchema.findOne({ email });
@@ -45,14 +51,15 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
-
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
     res.status(200).json({
       message: "Login successful",
@@ -64,6 +71,7 @@ exports.login = async (req, res) => {
         mobileNumber: user.mobileNumber,
         stream: user.stream,
         level: user.level,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -87,9 +95,11 @@ exports.updateProfile = async (req, res) => {
     const { name, mobileNumber, stream, level } = req.body;
     const updates = { name, mobileNumber, stream, level };
 
-    const user = await userSchema.findByIdAndUpdate(req.user.userId, updates, {
-      new: true,
-    }).select("-password");
+    const user = await userSchema
+      .findByIdAndUpdate(req.user.userId, updates, {
+        new: true,
+      })
+      .select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({ message: "Profile updated successfully", user });
@@ -109,3 +119,15 @@ exports.deleteProfile = async (req, res) => {
   }
 };
 
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await userSchema.find().select("-password");
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users found" });
+    }
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    res.status(500).json({ message: "Server error, please try again later" });
+  }
+};

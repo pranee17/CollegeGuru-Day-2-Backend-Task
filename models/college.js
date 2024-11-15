@@ -9,8 +9,8 @@ const collegeSchema = new mongoose.Schema(
       minlength: 3,
     },
     location: {
-      type: String,
-      required: true,
+      city: { type: String, required: true },
+      state: { type: String, required: true },
     },
     degrees: [
       {
@@ -49,7 +49,7 @@ const collegeSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["Public", "Private"],
+      enum: ["Public", "Private", "Private UnAided"],
       required: true,
     },
     feesRange: {
@@ -57,7 +57,8 @@ const collegeSchema = new mongoose.Schema(
       max: { type: Number, required: true },
     },
     highestPackage: {
-      type: String, 
+      type: String,  
+      required: true,
     },
     popularity: {
       type: String,
@@ -65,10 +66,8 @@ const collegeSchema = new mongoose.Schema(
       default: "Standard",
     },
     ratings: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
+      average: { type: Number, min: 0, max: 5, default: 0 },
+      totalReviews: { type: Number, default: 0 },
     },
     admissionDetails: {
       ugCourses: String,
@@ -96,19 +95,31 @@ const collegeSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    website: { type: String },              
+    campusFacilities: [String],            
+    placementStats: {
+      totalPlaced: Number,
+      placementPercentage: Number,
+    },
+    contactInfo: {
+      phone: String,
+      email: String,
+      address: String,
+    },
+    counselingAvailability: {
+      type: Boolean,
+      default: false,
+    },
   },
-  
   {
     timestamps: true,
   }
 );
 
-
-
 collegeSchema.index({ name: 1 });
-collegeSchema.index({ location: 1 });
+collegeSchema.index({ "location.state": 1, "location.city": 1 });
 collegeSchema.index({ degrees: 1 });
-collegeSchema.index({ "reviews.flagged": 1 }); // For flagged reviews
-collegeSchema.index({ location: 1, degrees: 1 }); // Compound index for common queries
+collegeSchema.index({ "reviews.flagged": 1 });
+collegeSchema.index({ "location.state": 1, degrees: 1 });
 
 module.exports = mongoose.model("College", collegeSchema);

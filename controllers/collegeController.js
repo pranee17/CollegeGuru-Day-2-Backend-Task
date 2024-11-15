@@ -7,27 +7,32 @@ exports.getAllColleges = async (req, res) => {
       lastId,
       sortBy = "name",
       degrees,
-      location,
+      state,
+      city,
+      type,
+      popularity,
     } = req.query;
+
     const query = {};
     if (degrees) query.degrees = { $in: degrees.split(",") };
-    if (location) query.location = location;
+    if (state) query["location.state"] = state;
+    if (city) query["location.city"] = city;
+    if (type) query.type = type;
+    if (popularity) query.popularity = popularity;
 
     if (lastId) {
       query._id = { $gt: lastId };
     }
 
     const colleges = await College.find(query)
-      .sort({ _id: 1 })
+      .sort({ [sortBy]: 1, _id: 1 })
       .limit(Number(limit))
       .lean();
 
-    res
-      .status(200)
-      .json({
-        colleges,
-        lastId: colleges.length ? colleges[colleges.length - 1]._id : null,
-      });
+    res.status(200).json({
+      colleges,
+      lastId: colleges.length ? colleges[colleges.length - 1]._id : null,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -36,7 +41,10 @@ exports.getAllColleges = async (req, res) => {
 exports.getCollegeById = async (req, res) => {
   try {
     const college = await College.findById(req.params.id)
-      .select("name location degrees reviews")
+      .select(
+        "name location degrees coursesOffered yearOfEstablishment type feesRange highestPackage popularity ratings admissionDetails scholarships gallery reviews website campusFacilities placementStats contactInfo"
+      )
+      .populate("reviews.user", "name") 
       .lean();
 
     if (!college) {
@@ -163,9 +171,14 @@ exports.getFlaggedReviews = async (req, res) => {
       },
     ]);
 
+    if (flaggedReviews.length === 0) {
+      return res.status(404).json({ message: "No flagged reviews found" });
+    }
+
     res.status(200).json(flaggedReviews);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching flagged reviews:", error);
+    res.status(500).json({ message: "Server error, please try again later" });
   }
 };
 
